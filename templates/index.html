@@ -1,39 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link rel="icon" type="image/png" href="/static/favicon.png">
     <meta charset="UTF-8">
     <title>SitSpot</title>
 
+    <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body>
 
+<!-- HEADER -->
 <header>
 
-    <h1>📍 SitSpot</h1>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <button onclick="history.back()" class="back-btn">←</button>
+        <h1>📍 SitSpot</h1>
+    </div>
 
     <!-- ZOEK -->
-    <form method="get" action="/">
+    <form method="get" action="/" style="display:flex; gap:5px;">
         <input name="search" placeholder="🔍 Zoek op stad">
         <button class="btn">Zoeken</button>
     </form>
 
-    <!-- GPS -->
-    <button class="btn" onclick="getLocation()">📍 Near me</button>
+    <!-- ACTIES -->
+    <div style="display:flex; gap:5px; flex-wrap:wrap;">
+        <button class="btn" onclick="getLocation()">📍 Near me</button>
 
-    <!-- USER NAV -->
-    {% if user %}
-        <span>👤 {{user}}</span>
-        <a href="/logout" class="btn">🚪 Logout</a>
-        <a href="/add" class="btn">➕ Nieuwe spot toevoegen</a>
-    {% else %}
-        <a href="/login" class="btn">🔐 Login</a>
-        <a href="/register" class="btn">📝 Register</a>
-    {% endif %}
+        {% if user %}
+            <span>👤 {{user}}</span>
+            <a href="/logout" class="btn">🚪 Logout</a>
+            <a href="/add" class="btn">➕ Spot</a>
+        {% else %}
+            <a href="/login" class="btn">🔐 Login</a>
+            <a href="/register" class="btn">📝 Register</a>
+        {% endif %}
+    </div>
 
 </header>
 
@@ -54,8 +60,6 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-// 🔥 STABIELE MAP LOGICA
-
 var map = L.map('map');
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -77,7 +81,6 @@ var markers = [];
     }
 {% endfor %}
 
-// 🔥 AUTO ZOOM
 if (markers.length > 0) {
     var group = L.featureGroup(markers);
     map.fitBounds(group.getBounds());
@@ -86,7 +89,7 @@ if (markers.length > 0) {
 }
 </script>
 
-<!-- GPS SCRIPT -->
+<!-- GPS -->
 <script>
 function getLocation(){
     if(navigator.geolocation){

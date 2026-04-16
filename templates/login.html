@@ -1,26 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="/static/css/style.css">
+    <meta charset="UTF-8">
+    <title>Login - SitSpot</title>
+
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
+
 <body>
 
-<h2>🔐 Login</h2>
+<!-- HEADER -->
+<header>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <button onclick="history.back()" class="back-btn">←</button>
+        <h2>🔐 Login</h2>
+    </div>
+</header>
 
-<form method="post">
+<!-- FORM -->
+<form method="post" class="form">
 
-<label>👤 Username</label>
-<input type="text" name="username" placeholder="Voer je username in">
+    <label>👤 Username</label>
+    <input type="text" name="username" placeholder="Voer je username in" required>
 
-<label>🔑 Password</label>
-<input type="password" name="password" placeholder="Voer je wachtwoord in">
+    <label>🔑 Password</label>
+    <input type="password" name="password" placeholder="Voer je wachtwoord in" required>
 
-<button class="btn">Login</button>
+    <button class="btn">Inloggen</button>
 
 </form>
 
-<a href="/register">Nog geen account? Registreren</a>
+<!-- LINK -->
+<p style="text-align:center;">
+    Nog geen account?
+    <a href="/register">Registreren</a>
+</p>
 
 </body>
 </html>
