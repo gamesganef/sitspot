@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="icon" type="image/png" href="/static/favicon.png">
+    <meta charset="UTF-8">
+    <title>SitSpot</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+</head>
+
+<body>
+
+<header>
+
+    <h1>📍 SitSpot</h1>
+
+    <!-- ZOEK -->
+    <form method="get" action="/">
+        <input name="search" placeholder="🔍 Zoek op stad">
+        <button class="btn">Zoeken</button>
+    </form>
+
+    <!-- GPS -->
+    <button class="btn" onclick="getLocation()">📍 Near me</button>
+
+    <!-- USER NAV -->
+    {% if user %}
+        <span>👤 {{user}}</span>
+        <a href="/logout" class="btn">🚪 Logout</a>
+        <a href="/add" class="btn">➕ Nieuwe spot toevoegen</a>
+    {% else %}
+        <a href="/login" class="btn">🔐 Login</a>
+        <a href="/register" class="btn">📝 Register</a>
+    {% endif %}
+
+</header>
+
+<!-- KAART -->
+<div id="map"></div>
+
+<!-- SPOTS -->
+<div class="grid">
+{% for s in spots %}
+    <a href="/spot/{{s[0]}}" class="card">
+        <h2>{{s[1]}}</h2>
+        <p>📍 {{s[2]}}</p>
+    </a>
+{% endfor %}
+</div>
+
+<!-- LEAFLET -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+// 🔥 STABIELE MAP LOGICA
+
+var map = L.map('map');
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+}).addTo(map);
+
+var markers = [];
+
+{% for s in spots %}
+    var lat = parseFloat("{{s[4]}}");
+    var lng = parseFloat("{{s[5]}}");
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+        var marker = L.marker([lat, lng])
+            .addTo(map)
+            .bindPopup("{{s[1]}}");
+
+        markers.push(marker);
+    }
+{% endfor %}
+
+// 🔥 AUTO ZOOM
+if (markers.length > 0) {
+    var group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds());
+} else {
+    map.setView([52.37, 4.89], 10);
+}
+</script>
+
+<!-- GPS SCRIPT -->
+<script>
+function getLocation(){
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(function(pos){
+            alert("Jouw locatie:\\nLat: " + pos.coords.latitude + "\\nLng: " + pos.coords.longitude);
+        });
+    } else {
+        alert("GPS werkt niet");
+    }
+}
+</script>
+
+</body>
+</html>

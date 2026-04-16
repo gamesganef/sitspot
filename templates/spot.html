@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+</head>
+<body>
+
+<a href="/">← terug</a>
+
+<h1>{{s[1]}}</h1>
+
+<div class="slider">
+{% for i in imgs %}
+<img src="/static/uploads/{{i[0]}}">
+{% endfor %}
+</div>
+
+<p>{{s[3]}}</p>
+<p>⭐ {{avg if avg else 0}}</p>
+
+<form method="post" action="/rate/{{s[0]}}">
+<input type="number" name="rating" min="1" max="5">
+<input name="comment">
+<button class="btn">Review</button>
+</form>
+
+{% for r in reviews %}
+<p>{{r[0]}} ⭐ {{r[1]}}</p>
+<p>{{r[2]}}</p>
+{% endfor %}
+
+<h3>Comments</h3>
+<form method="post" action="/comment/{{s[0]}}">
+<input name="text">
+<button class="btn">Plaatsen</button>
+</form>
+
+{% for c in comments %}
+<p>{{c[0]}}: {{c[1]}}</p>
+{% endfor %}
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+var map = L.map('map').setView([{{s[4]}}, {{s[5]}}], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+L.marker([{{s[4]}}, {{s[5]}}]).addTo(map);
+</script>
+
+</body>
+</html>

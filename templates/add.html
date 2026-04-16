@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Nieuwe Spot</title>
+</head>
+<body>
+
+<a href="/">← Terug</a>
+
+<h1>Nieuwe spot toevoegen</h1>
+
+<form method="post" enctype="multipart/form-data" class="form">
+
+    <!-- GPS BUTTON -->
+    <button type="button" class="btn" onclick="getLocation()">
+        📍 Gebruik mijn huidige locatie
+    </button>
+
+    <!-- NAAM -->
+    <label>📍 Naam van de plek</label>
+    <input name="name" placeholder="Bijv. Parkbank bij meer">
+
+    <!-- LOCATIE -->
+    <label>🏙️ Stad / locatie</label>
+    <input name="location" placeholder="Bijv. Rotterdam">
+
+    <!-- BESCHRIJVING -->
+    <label>📝 Beschrijving</label>
+    <textarea name="description" placeholder="Vertel iets over deze plek..."></textarea>
+
+    <!-- LAT -->
+    <label>🌍 Latitude (breedtegraad)</label>
+    <input id="lat" name="lat" placeholder="Bijv. 51.9225">
+
+    <!-- LNG -->
+    <label>🌍 Longitude (lengtegraad)</label>
+    <input id="lng" name="lng" placeholder="Bijv. 4.47917">
+
+    <!-- FOTO -->
+    <label>📸 Upload foto's</label>
+    <input type="file" name="images" multiple>
+
+    <!-- SUBMIT -->
+    <button class="btn">➕ Spot opslaan</button>
+
+</form>
+
+<!-- GPS SCRIPT -->
+<script>
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+
+            document.getElementById("lat").value = position.coords.latitude;
+            document.getElementById("lng").value = position.coords.longitude;
+
+        }, function(error) {
+            alert("Locatie ophalen mislukt");
+        });
+    } else {
+        alert("GPS wordt niet ondersteund");
+    }
+}
+</script>
+
+</body>
+</html>
