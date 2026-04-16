@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session, flash
+from flask import Flask, render_template, request, redirect, session, flash, send_file
 import sqlite3, os
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -12,7 +12,9 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 bad_words = ["kanker", "fuck", "shit", "tering"]
-ADMIN = "stefan"
+
+# 🔥 JOUW ADMIN (BELANGRIJK)
+ADMIN = "Stefan"
 
 def db():
     return sqlite3.connect("sitspots.db")
@@ -58,7 +60,13 @@ def index():
 
     spots = c.fetchall()
     conn.close()
-    return render_template("index.html", spots=spots, user=session.get("user"))
+
+    return render_template(
+        "index.html",
+        spots=spots,
+        user=session.get("user"),
+        admin=ADMIN   # 🔥 DIT WAS BELANGRIJK
+    )
 
 @app.route("/register", methods=["GET","POST"])
 def register():
@@ -177,7 +185,16 @@ def spot(id):
 
     conn.close()
 
-    return render_template("spot.html", s=s, imgs=imgs, reviews=reviews, comments=comments, avg=avg, user=session.get("user"), admin=ADMIN)
+    return render_template(
+        "spot.html",
+        s=s,
+        imgs=imgs,
+        reviews=reviews,
+        comments=comments,
+        avg=avg,
+        user=session.get("user"),
+        admin=ADMIN
+    )
 
 @app.route("/rate/<int:id>", methods=["POST"])
 def rate(id):
@@ -241,6 +258,18 @@ def delete(id):
         conn.commit()
 
     conn.close()
+    return redirect("/")
+
+# 🔥 BACKUP DOWNLOAD
+@app.route("/backup")
+def backup():
+    return send_file("sitspots.db", as_attachment=True)
+
+# 🔥 RESTORE UPLOAD
+@app.route("/restore", methods=["POST"])
+def restore():
+    file = request.files["file"]
+    file.save("sitspots.db")
     return redirect("/")
 
 if __name__ == "__main__":

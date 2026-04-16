@@ -19,7 +19,7 @@
         <h1>📍 SitSpot</h1>
     </div>
 
-    <!-- 🔥 NIEUWE ZOEK -->
+    <!-- 🔥 ZOEK -->
     <form onsubmit="searchCity(event)" style="display:flex; gap:5px;">
         <input id="searchInput" placeholder="🔍 Zoek op stad">
         <button class="btn">Zoeken</button>
@@ -39,6 +39,20 @@
     </div>
 
 </header>
+
+<!-- 🔥 ADMIN BACKUP KNOPPEN -->
+{% if user and user|lower == admin|lower %}
+<div style="padding:10px; display:flex; gap:10px; flex-wrap:wrap;">
+
+    <a href="/backup" class="btn">⬇️ Download DB</a>
+
+    <form action="/restore" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <button class="btn">⬆️ Upload DB</button>
+    </form>
+
+</div>
+{% endif %}
 
 <div id="map"></div>
 
@@ -62,7 +76,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 var markers = [];
 
-// 🔥 markers maken
 {% for s in spots %}
     var lat = parseFloat("{{s[4]}}");
     var lng = parseFloat("{{s[5]}}");
@@ -76,7 +89,6 @@ var markers = [];
     }
 {% endfor %}
 
-// standaard view
 if (markers.length > 0) {
     var group = L.featureGroup(markers);
     map.fitBounds(group.getBounds());
@@ -84,7 +96,6 @@ if (markers.length > 0) {
     map.setView([52.37, 4.89], 10);
 }
 
-// 🔥 SEARCH FUNCTIE (ECHT WERKEND)
 function searchCity(e){
     e.preventDefault();
 
@@ -98,10 +109,8 @@ function searchCity(e){
             let lat = parseFloat(data[0].lat);
             let lon = parseFloat(data[0].lon);
 
-            // kaart naar stad
             map.setView([lat, lon], 13);
 
-            // 🔥 FILTER markers op afstand (±10km)
             markers.forEach(m => {
                 let pos = m.getLatLng();
 
@@ -110,7 +119,7 @@ function searchCity(e){
                     [pos.lat, pos.lng]
                 );
 
-                if(distance < 10000){ // 10km
+                if(distance < 10000){
                     if(!map.hasLayer(m)) m.addTo(map);
                 } else {
                     map.removeLayer(m);
