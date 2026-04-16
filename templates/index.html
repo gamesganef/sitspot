@@ -13,21 +13,18 @@
 
 <body>
 
-<!-- HEADER -->
 <header>
 
     <div style="display:flex; align-items:center; gap:10px;">
-        <button onclick="history.back()" class="back-btn">←</button>
         <h1>📍 SitSpot</h1>
     </div>
 
-    <!-- ZOEK -->
-    <form method="get" action="/" style="display:flex; gap:5px;">
-        <input name="search" placeholder="🔍 Zoek op stad">
+    <!-- 🔥 NIEUWE ZOEK -->
+    <form onsubmit="searchCity(event)" style="display:flex; gap:5px;">
+        <input id="searchInput" placeholder="🔍 Zoek op stad">
         <button class="btn">Zoeken</button>
     </form>
 
-    <!-- ACTIES -->
     <div style="display:flex; gap:5px; flex-wrap:wrap;">
         <button class="btn" onclick="getLocation()">📍 Near me</button>
 
@@ -43,10 +40,8 @@
 
 </header>
 
-<!-- KAART -->
 <div id="map"></div>
 
-<!-- SPOTS -->
 <div class="grid">
 {% for s in spots %}
     <a href="/spot/{{s[0]}}" class="card">
@@ -56,7 +51,6 @@
 {% endfor %}
 </div>
 
-<!-- LEAFLET -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
@@ -68,6 +62,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 var markers = [];
 
+// 🔥 markers maken
 {% for s in spots %}
     var lat = parseFloat("{{s[4]}}");
     var lng = parseFloat("{{s[5]}}");
@@ -81,23 +76,60 @@ var markers = [];
     }
 {% endfor %}
 
+// standaard view
 if (markers.length > 0) {
     var group = L.featureGroup(markers);
     map.fitBounds(group.getBounds());
 } else {
     map.setView([52.37, 4.89], 10);
 }
+
+// 🔥 SEARCH FUNCTIE (ECHT WERKEND)
+function searchCity(e){
+    e.preventDefault();
+
+    let city = document.getElementById("searchInput").value;
+
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${city}`)
+    .then(res => res.json())
+    .then(data => {
+
+        if(data.length > 0){
+            let lat = parseFloat(data[0].lat);
+            let lon = parseFloat(data[0].lon);
+
+            // kaart naar stad
+            map.setView([lat, lon], 13);
+
+            // 🔥 FILTER markers op afstand (±10km)
+            markers.forEach(m => {
+                let pos = m.getLatLng();
+
+                let distance = map.distance(
+                    [lat, lon],
+                    [pos.lat, pos.lng]
+                );
+
+                if(distance < 10000){ // 10km
+                    if(!map.hasLayer(m)) m.addTo(map);
+                } else {
+                    map.removeLayer(m);
+                }
+            });
+
+        } else {
+            alert("Stad niet gevonden");
+        }
+    });
+}
 </script>
 
-<!-- GPS -->
 <script>
 function getLocation(){
     if(navigator.geolocation){
         navigator.geolocation.getCurrentPosition(function(pos){
-            alert("Jouw locatie:\\nLat: " + pos.coords.latitude + "\\nLng: " + pos.coords.longitude);
+            alert("Lat: " + pos.coords.latitude + " Lng: " + pos.coords.longitude);
         });
-    } else {
-        alert("GPS werkt niet");
     }
 }
 </script>
