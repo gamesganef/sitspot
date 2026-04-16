@@ -40,8 +40,7 @@
 
 </header>
 
-<!-- 🔥 ADMIN BACKUP KNOPPEN -->
-{% if user and user|lower == admin|lower %}
+<!-- 🔥 BACKUP KNOPPEN (NU VOOR IEDEREEN) -->
 <div style="padding:10px; display:flex; gap:10px; flex-wrap:wrap;">
 
     <a href="/backup" class="btn">⬇️ Download DB</a>
@@ -52,7 +51,6 @@
     </form>
 
 </div>
-{% endif %}
 
 <div id="map"></div>
 
