@@ -1,43 +1,101 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Registreren - SitSpot</title>
-
-    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <title>Register - SitSpot</title>
     <link rel="stylesheet" href="/static/css/style.css">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
 
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            width: 340px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        .info {
+            font-size: 13px;
+            color: #666;
+            margin: 10px 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #4CAF50;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        a {
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .back {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
+        .link {
+            margin-top: 15px;
+            display: block;
+        }
+    </style>
+</head>
 <body>
 
-<!-- HEADER -->
-<header>
-    <div style="display:flex; align-items:center; gap:10px;">
-        <button onclick="history.back()" class="back-btn">←</button>
-        <h2>📝 Account maken</h2>
-    </div>
-</header>
+<a href="/" class="back">← Terug</a>
 
-<!-- FORM -->
-<form method="post" class="form">
+<div class="container">
+    <h2>Account maken</h2>
 
-    <label>👤 Username</label>
-    <input type="text" name="username" placeholder="Kies een username" required>
+    <form method="POST">
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Wachtwoord" required>
 
-    <label>🔑 Password</label>
-    <input type="password" name="password" placeholder="Kies een wachtwoord" required>
+        <div class="info">
+            Minimaal 8 tekens,<br>
+            1 hoofdletter en 1 speciaal teken
+        </div>
 
-    <button class="btn">Registreren</button>
+        <button type="submit">Register</button>
+    </form>
 
-</form>
-
-<!-- LINK -->
-<p style="text-align:center;">
-    Al een account?
-    <a href="/login">Login</a>
-</p>
+    <a href="/login" class="link">Heb je al een account? Login</a>
+</div>
 
 </body>
 </html>

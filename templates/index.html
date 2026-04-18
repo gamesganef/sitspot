@@ -1,143 +1,182 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
     <title>SitSpot</title>
-
-    <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
-
 <body>
 
 <header>
+    <h1>SitSpot</h1>
 
-    <div style="display:flex; align-items:center; gap:10px;">
-        <h1>📍 SitSpot</h1>
-    </div>
+    <!-- 🔍 ZOEK + RESET -->
+    <form method="GET" style="display:flex; gap:5px;">
+        <input type="text" name="search" placeholder="Zoek locatie..." value="{{search}}">
+        <button class="btn">Zoek</button>
 
-    <!-- 🔥 ZOEK -->
-    <form onsubmit="searchCity(event)" style="display:flex; gap:5px;">
-        <input id="searchInput" placeholder="🔍 Zoek op stad">
-        <button class="btn">Zoeken</button>
+        {% if search %}
+            <a href="/" class="btn">Reset</a>
+        {% endif %}
     </form>
 
-    <div style="display:flex; gap:5px; flex-wrap:wrap;">
-        <button class="btn" onclick="getLocation()">📍 Near me</button>
-
-        {% if user %}
-            <span>👤 {{user}}</span>
-            <a href="/logout" class="btn">🚪 Logout</a>
-            <a href="/add" class="btn">➕ Spot</a>
-        {% else %}
-            <a href="/login" class="btn">🔐 Login</a>
-            <a href="/register" class="btn">📝 Register</a>
-        {% endif %}
-    </div>
-
+    {% if session.get("user") %}
+        <span>Ingelogd als: {{ session.get("user") }}</span>
+        <a href="/add" class="btn">+ Spot toevoegen</a>
+        <a href="/logout" class="btn">Logout</a>
+    {% else %}
+        <a href="/login" class="btn">Login</a>
+        <a href="/register" class="btn">Register</a>
+    {% endif %}
 </header>
 
-<!-- 🔥 BACKUP KNOPPEN (NU VOOR IEDEREEN) -->
-<div style="padding:10px; display:flex; gap:10px; flex-wrap:wrap;">
-
-    <a href="/backup" class="btn">⬇️ Download DB</a>
-
-    <form action="/restore" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" required>
-        <button class="btn">⬆️ Upload DB</button>
-    </form>
-
-</div>
-
+<!-- KAART -->
 <div id="map"></div>
 
+<!-- ❌ GEEN RESULTATEN -->
+{% if search and spots|length == 0 %}
+    <p style="padding:10px;">❌ Geen resultaten gevonden voor "{{search}}"</p>
+{% endif %}
+
+<!-- SPOTS GRID -->
 <div class="grid">
+
 {% for s in spots %}
-    <a href="/spot/{{s[0]}}" class="card">
-        <h2>{{s[1]}}</h2>
-        <p>📍 {{s[2]}}</p>
-    </a>
+    <div class="card" style="position:relative;">
+
+        <!-- ❤️ FAVORIET -->
+        {% if session.get("user") %}
+            <div style="position:absolute; top:10px; right:10px; font-size:20px;">
+                {% if s[0] in favorites %}
+                    <a href="/unfavorite/{{s[0]}}" style="text-decoration:none;">💔</a>
+                {% else %}
+                    <a href="/favorite/{{s[0]}}" style="text-decoration:none;">❤️</a>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <a href="/spot/{{s[0]}}">
+
+            <!-- FOTO -->
+            {% if images[s[0]] %}
+                <img src="/static/uploads/{{images[s[0]]}}">
+            {% endif %}
+
+            <h3>{{s[1]}}</h3>
+            <p>{{s[2]}}</p>
+
+            <!-- 📏 AFSTAND -->
+            <p class="distance" id="dist-{{s[0]}}">📏 ...</p>
+
+            <!-- STATUS -->
+            {% if s[8] %}
+                <p>🔴 Bezet</p>
+            {% else %}
+                <p>🟢 Vrij</p>
+            {% endif %}
+
+            <!-- RATING -->
+            {% set total = namespace(val=0, count=0) %}
+            {% for r in reviews %}
+                {% if r[0] == s[0] %}
+                    {% set total.val = total.val + r[1] %}
+                    {% set total.count = total.count + 1 %}
+                {% endif %}
+            {% endfor %}
+
+            {% if total.count > 0 %}
+                <p>⭐ {{ (total.val / total.count)|round(1) }}</p>
+            {% else %}
+                <p>⭐ Geen reviews</p>
+            {% endif %}
+
+        </a>
+    </div>
 {% endfor %}
+
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
+<!-- MAP SCRIPT -->
 <script>
-var map = L.map('map');
+var map = L.map('map').setView([52.37, 4.89], 7);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
-var markers = [];
+// 🔥 ZOOM NAAR GEZOCHTE LOCATIE
+{% if search %}
+var query = "{{search}}";
 
-{% for s in spots %}
-    var lat = parseFloat("{{s[4]}}");
-    var lng = parseFloat("{{s[5]}}");
+fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(query))
+.then(res => res.json())
+.then(data => {
+    if (data.length > 0) {
+        var lat = data[0].lat;
+        var lon = data[0].lon;
 
-    if (!isNaN(lat) && !isNaN(lng)) {
-        var marker = L.marker([lat, lng])
-            .addTo(map)
-            .bindPopup("{{s[1]}}");
+        map.setView([lat, lon], 13);
 
-        markers.push(marker);
+        L.marker([lat, lon]).addTo(map)
+            .bindPopup("📍 " + query)
+            .openPopup();
     }
+});
+{% endif %}
+
+// 🔥 MARKERS
+{% for s in spots %}
+    var color = "{{ 'red' if s[8] else 'green' }}";
+
+    var marker = L.circleMarker([{{s[4]}}, {{s[5]}}], {
+        color: color,
+        radius: 8
+    }).addTo(map);
+
+    marker.bindPopup(`
+        <b>{{s[1]}}</b><br>
+        {% if s[8] %}
+            🔴 Bezet<br>
+        {% else %}
+            🟢 Vrij<br>
+        {% endif %}
+        <a href="/spot/{{s[0]}}">Bekijk</a>
+    `);
 {% endfor %}
 
-if (markers.length > 0) {
-    var group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds());
-} else {
-    map.setView([52.37, 4.89], 10);
+// 🔥 AFSTAND
+function getDistance(lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = (lat2-lat1) * Math.PI / 180;
+    var dLon = (lon2-lon1) * Math.PI / 180;
+
+    var a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
 }
 
-function searchCity(e){
-    e.preventDefault();
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
 
-    let city = document.getElementById("searchInput").value;
+        var userLat = pos.coords.latitude;
+        var userLng = pos.coords.longitude;
 
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${city}`)
-    .then(res => res.json())
-    .then(data => {
+        {% for s in spots %}
+            var dist = getDistance(userLat, userLng, {{s[4]}}, {{s[5]}});
+            dist = dist.toFixed(1);
 
-        if(data.length > 0){
-            let lat = parseFloat(data[0].lat);
-            let lon = parseFloat(data[0].lon);
+            document.getElementById("dist-{{s[0]}}").innerText =
+                "📏 " + dist + " km van jou";
+        {% endfor %}
 
-            map.setView([lat, lon], 13);
-
-            markers.forEach(m => {
-                let pos = m.getLatLng();
-
-                let distance = map.distance(
-                    [lat, lon],
-                    [pos.lat, pos.lng]
-                );
-
-                if(distance < 10000){
-                    if(!map.hasLayer(m)) m.addTo(map);
-                } else {
-                    map.removeLayer(m);
-                }
-            });
-
-        } else {
-            alert("Stad niet gevonden");
-        }
     });
-}
-</script>
-
-<script>
-function getLocation(){
-    if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(function(pos){
-            alert("Lat: " + pos.coords.latitude + " Lng: " + pos.coords.longitude);
-        });
-    }
 }
 </script>
 

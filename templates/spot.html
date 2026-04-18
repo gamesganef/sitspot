@@ -1,92 +1,107 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>{{s[1]}} - SitSpot</title>
-
-    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <title>{{s[1]}}</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
-<body>
+<body class="mobile">
 
 <!-- HEADER -->
-<header>
-    <div style="display:flex; align-items:center; gap:10px;">
-        <button onclick="history.back()" class="back-btn">←</button>
-        <h1>{{s[1]}}</h1>
+<div class="header">
+    <a href="/" class="back-btn">←</a>
+    <h2>{{s[1]}}</h2>
+</div>
+
+<!-- IMAGE SLIDER -->
+<div class="image-slider">
+    {% for i in imgs %}
+        <img src="{{ url_for('static', filename='uploads/' + i[0]) }}">
+    {% endfor %}
+</div>
+
+<!-- MAIN CARD -->
+<div class="card main-card">
+
+    <p class="location">📍 {{s[2]}}</p>
+    <p class="desc">{{s[3]}}</p>
+
+    <!-- 🗺️ MAP BUTTON (GEFIXT) -->
+    <a
+      href="https://www.google.com/maps/dir/?api=1&destination={{s[4]}},{{s[5]}}"
+      target="_blank"
+      class="big-btn"
+    >
+        🗺️ Route starten
+    </a>
+
+    <!-- STATUS -->
+    <div class="status">
+    {% if occupied_by %}
+        {% if occupied_by == user %}
+            <p class="you">🟡 Jij zit hier</p>
+            <form method="POST" action="/leave/{{s[0]}}">
+                <button class="danger-btn">Ik ga weg</button>
+            </form>
+        {% else %}
+            <p class="occupied">🔴 Bezet door {{occupied_by}}</p>
+        {% endif %}
+    {% else %}
+        <p class="free">🟢 Vrij</p>
+        <form method="POST" action="/occupy/{{s[0]}}" onsubmit="getLocation(event, this)">
+            <input type="hidden" name="user_lat">
+            <input type="hidden" name="user_lng">
+            <button class="big-btn">Ik zit hier</button>
+        </form>
+    {% endif %}
     </div>
-</header>
 
-<!-- FOTO SLIDER -->
-<div class="slider">
-{% for i in imgs %}
-    <img src="/static/uploads/{{i[0]}}">
-{% endfor %}
-</div>
-
-<!-- INFO -->
-<div style="padding:15px;">
-    <p>{{s[3]}}</p>
-    <p>⭐ {{avg if avg else 0}}</p>
-</div>
-
-<!-- REVIEW FORM -->
-<div style="padding:15px;">
-    <h3>⭐ Plaats een review</h3>
-
-    <form method="post" action="/rate/{{s[0]}}">
-        <label>Rating (1-5)</label>
-        <input type="number" name="rating" min="1" max="5" required>
-
-        <label>Comment</label>
-        <input name="comment" placeholder="Wat vond je van deze plek?" required>
-
-        <button class="btn">Review plaatsen</button>
-    </form>
 </div>
 
 <!-- REVIEWS -->
-<div style="padding:15px;">
+<div class="card">
+
+    {% if avg %}
+        <p class="avg">⭐ {{avg|round(1)}} / 5</p>
+    {% endif %}
+
+    {% if user %}
+    <form method="POST" action="/rate/{{s[0]}}" class="form">
+        <input type="number" name="rating" min="1" max="5" placeholder="Rating (1-5)" required>
+        <textarea name="comment" placeholder="Schrijf je review..." required></textarea>
+        <button class="big-btn">Plaatsen</button>
+    </form>
+    {% endif %}
+
     <h3>Reviews</h3>
 
     {% for r in reviews %}
-        <div class="card">
-            <p><b>{{r[0]}}</b> ⭐ {{r[1]}}</p>
-            <p>{{r[2]}}</p>
-        </div>
+    <div class="review">
+        <strong>{{r[0]}}</strong>
+        <span>⭐ {{r[1]}}</span>
+        <p>{{r[2]}}</p>
+    </div>
     {% endfor %}
+
 </div>
 
-<!-- COMMENTS -->
-<div style="padding:15px;">
-    <h3>Comments</h3>
+<!-- DELETE -->
+{% if user == s[6] or user == admin %}
+<form method="POST" action="/delete/{{s[0]}}">
+    <button class="danger-btn">Verwijder spot</button>
+</form>
+{% endif %}
 
-    <form method="post" action="/comment/{{s[0]}}">
-        <input name="text" placeholder="Typ een comment..." required>
-        <button class="btn">Plaatsen</button>
-    </form>
-
-    {% for c in comments %}
-        <p><b>{{c[0]}}</b>: {{c[1]}}</p>
-    {% endfor %}
-</div>
-
-<!-- MAP -->
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-var map = L.map('map').setView([{{s[4]}}, {{s[5]}}], 13);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-}).addTo(map);
-
-L.marker([{{s[4]}}, {{s[5]}}]).addTo(map);
+function getLocation(event, form) {
+    event.preventDefault();
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        form.user_lat.value = pos.coords.latitude;
+        form.user_lng.value = pos.coords.longitude;
+        form.submit();
+    }, function() {
+        alert("Locatie nodig");
+    });
+}
 </script>
 
 </body>
