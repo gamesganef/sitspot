@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import os
 from datetime import datetime, timedelta
-from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from PIL import Image
 
 app = Flask(__name__)
@@ -26,6 +26,7 @@ def index():
 
     now = datetime.now()
 
+    # reset expired
     c.execute("""
         UPDATE spots
         SET occupied_by=NULL, occupied_until=NULL
@@ -50,19 +51,25 @@ def index():
     else:
         spots = c.execute("SELECT * FROM spots").fetchall()
 
-    reviews = c.execute("SELECT spot_id, rating FROM ratings").fetchall()
+    # 🔥 BETERE RATINGS QUERY
+    ratings_data = c.execute("""
+        SELECT spot_id, AVG(rating), COUNT(*)
+        FROM ratings
+        GROUP BY spot_id
+    """).fetchall()
 
+    ratings = {r[0]: {"avg": r[1], "count": r[2]} for r in ratings_data}
+
+    # favorites
     favorites = []
     if "user" in session:
-        try:
-            favs = c.execute(
-                "SELECT spot_id FROM favorites WHERE username=?",
-                (session["user"],)
-            ).fetchall()
-            favorites = [f[0] for f in favs]
-        except:
-            favorites = []
+        favs = c.execute(
+            "SELECT spot_id FROM favorites WHERE username=?",
+            (session["user"],)
+        ).fetchall()
+        favorites = [f[0] for f in favs]
 
+    # images
     images = {}
     for s in spots:
         img = c.execute(
@@ -74,7 +81,7 @@ def index():
     return render_template(
         "index.html",
         spots=spots,
-        reviews=reviews,
+        ratings=ratings,
         images=images,
         search=search,
         favorites=favorites
@@ -99,7 +106,7 @@ def favorites_page():
     return render_template("favorites.html", spots=spots)
 
 
-# ❤️ ADD FAVORITE
+# ❤️ ADD FAVORITE (FIXED)
 @app.route("/favorite/<int:id>")
 def favorite(id):
     if "user" not in session:
@@ -108,15 +115,12 @@ def favorite(id):
     db = get_db()
     c = db.cursor()
 
-    try:
-        c.execute(
-            "INSERT INTO favorites (username, spot_id) VALUES (?, ?)",
-            (session["user"], id)
-        )
-        db.commit()
-    except Exception as e:
-        print("FAVORITE ERROR:", e)
+    c.execute("""
+        INSERT OR IGNORE INTO favorites (username, spot_id)
+        VALUES (?, ?)
+    """, (session["user"], id))
 
+    db.commit()
     return redirect("/")
 
 
@@ -178,6 +182,28 @@ def leave(id):
     return redirect(f"/spot/{id}")
 
 
+# ⭐ RATE (NIEUW)
+@app.route("/rate/<int:id>", methods=["POST"])
+def rate(id):
+    if "user" not in session:
+        return redirect("/login")
+
+    rating = int(request.form["rating"])
+    comment = request.form["comment"]
+
+    db = get_db()
+    c = db.cursor()
+
+    c.execute("""
+        INSERT INTO ratings (spot_id, username, rating, comment)
+        VALUES (?, ?, ?, ?)
+    """, (id, session["user"], rating, comment))
+
+    db.commit()
+
+    return redirect(f"/spot/{id}")
+
+
 # 🔥 DELETE SPOT
 @app.route("/delete/<int:id>", methods=["POST"])
 def delete(id):
@@ -195,19 +221,16 @@ def delete(id):
     if spot[0] != session["user"]:
         return "Niet toegestaan"
 
-    try:
-        c.execute("DELETE FROM ratings WHERE spot_id=?", (id,))
-        c.execute("DELETE FROM images WHERE spot_id=?", (id,))
-        c.execute("DELETE FROM favorites WHERE spot_id=?", (id,))
-        c.execute("DELETE FROM spots WHERE id=?", (id,))
-        db.commit()
-    except Exception as e:
-        print("DELETE ERROR:", e)
+    c.execute("DELETE FROM ratings WHERE spot_id=?", (id,))
+    c.execute("DELETE FROM images WHERE spot_id=?", (id,))
+    c.execute("DELETE FROM favorites WHERE spot_id=?", (id,))
+    c.execute("DELETE FROM spots WHERE id=?", (id,))
+    db.commit()
 
     return redirect("/")
 
 
-# REGISTER
+# REGISTER (FIXED SECURITY)
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -221,9 +244,11 @@ def register():
         if existing:
             return "Email bestaat al"
 
+        hashed = generate_password_hash(password)
+
         c.execute(
             "INSERT INTO users (email, password) VALUES (?, ?)",
-            (email, password)
+            (email, hashed)
         )
         db.commit()
 
@@ -232,7 +257,7 @@ def register():
     return render_template("register.html")
 
 
-# LOGIN
+# LOGIN (FIXED SECURITY)
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -243,11 +268,11 @@ def login():
         c = db.cursor()
 
         user = c.execute(
-            "SELECT * FROM users WHERE email=? AND password=?",
-            (email, password)
+            "SELECT * FROM users WHERE email=?",
+            (email,)
         ).fetchone()
 
-        if user:
+        if user and check_password_hash(user[2], password):
             session["user"] = user[1]
             return redirect("/")
         else:
@@ -263,7 +288,7 @@ def logout():
     return redirect("/")
 
 
-# 🔥 ADD SPOT (FIXED MET COMPRESSIE)
+# 🔥 ADD SPOT
 @app.route("/add", methods=["GET", "POST"])
 def add():
     if "user" not in session:
@@ -296,8 +321,6 @@ def add():
                 filename = f"{spot_id}_{i}.jpg"
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
 
-                print("🔥 COMPRESSIE ACTIEF:", filename)
-
                 img = Image.open(file)
 
                 if img.mode in ("RGBA", "P"):
@@ -317,7 +340,7 @@ def add():
     return render_template("add.html")
 
 
-# SPOT DETAIL
+# SPOT DETAIL (MET TIMER)
 @app.route("/spot/<int:id>")
 def spot(id):
     db = get_db()
@@ -339,13 +362,22 @@ def spot(id):
     ratings = [r[1] for r in reviews]
     avg = sum(ratings) / len(ratings) if ratings else None
 
+    # 🔥 TIMER
+    remaining = None
+    if s[8]:
+        try:
+            remaining = int((datetime.fromisoformat(s[8]) - datetime.now()).total_seconds())
+        except:
+            remaining = None
+
     return render_template(
         "spot.html",
         s=s,
         reviews=reviews,
         imgs=imgs,
         avg=avg,
-        user=session.get("user")
+        user=session.get("user"),
+        remaining=remaining
     )
 
 

@@ -1,65 +1,79 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="stylesheet" href="/static/css/style.css">
     <title>Nieuwe Spot</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
+<body class="mobile">
 
-<a href="/">← Terug</a>
-
-<h1>Nieuwe spot toevoegen</h1>
+<header class="top-header">
+    <a href="/" class="back-btn">← Terug</a>
+    <h2>Nieuwe spot</h2>
+</header>
 
 <form method="post" enctype="multipart/form-data" class="form">
 
-    <!-- GPS BUTTON -->
-    <button type="button" class="btn" onclick="getLocation()">
-        📍 Gebruik mijn huidige locatie
-    </button>
+    <!-- 📍 LOCATIE BUTTON -->
+    <div class="card">
+        <button type="button" class="big-btn" onclick="getLocation()">
+            📍 Gebruik mijn locatie
+        </button>
+    </div>
 
-    <!-- NAAM -->
-    <label>📍 Naam van de plek</label>
-    <input name="name" placeholder="Bijv. Parkbank bij meer">
+    <!-- 📍 BASIS INFO -->
+    <div class="card">
+        <label>Naam van de plek</label>
+        <input name="name" placeholder="Bijv. Bankje bij meer">
 
-    <!-- LOCATIE -->
-    <label>🏙️ Stad / locatie</label>
-    <input name="location" placeholder="Bijv. Rotterdam">
+        <label>Stad / locatie</label>
+        <input name="location" placeholder="Bijv. Rotterdam">
+    </div>
 
-    <!-- BESCHRIJVING -->
-    <label>📝 Beschrijving</label>
-    <textarea name="description" placeholder="Vertel iets over deze plek..."></textarea>
+    <!-- 📝 BESCHRIJVING -->
+    <div class="card">
+        <label>Beschrijving</label>
+        <textarea name="description" placeholder="Vertel iets over deze plek..."></textarea>
+    </div>
 
-    <!-- LAT -->
-    <label>🌍 Latitude (breedtegraad)</label>
-    <input id="lat" name="lat" placeholder="Bijv. 51.9225">
+    <!-- 🌍 COORDINATEN -->
+    <div class="card">
+        <label>Latitude</label>
+        <input id="lat" name="lat" placeholder="Bijv. 51.9225">
 
-    <!-- LNG -->
-    <label>🌍 Longitude (lengtegraad)</label>
-    <input id="lng" name="lng" placeholder="Bijv. 4.47917">
+        <label>Longitude</label>
+        <input id="lng" name="lng" placeholder="Bijv. 4.47917">
+    </div>
 
-    <!-- FOTO -->
-    <label>📸 Upload foto's</label>
-    <input type="file" name="images" multiple>
+    <!-- 📸 FOTO -->
+    <div class="card">
+        <label>Upload foto's</label>
+        <input type="file" name="images" multiple>
+    </div>
 
-    <!-- SUBMIT -->
-    <button class="btn">➕ Spot opslaan</button>
+    <!-- ✅ SUBMIT -->
+    <button class="big-btn submit-btn">➕ Spot opslaan</button>
 
 </form>
 
-<!-- GPS SCRIPT -->
+<!-- 🔥 BOTTOM NAV -->
+<div class="bottom-nav">
+    <a href="/">🏠</a>
+    <a href="/favorites">❤️</a>
+    <a href="/add" class="add-btn">＋</a>
+    <a href="/logout">👤</a>
+</div>
+
 <script>
 function getLocation() {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(position) {
-
             document.getElementById("lat").value = position.coords.latitude;
             document.getElementById("lng").value = position.coords.longitude;
-
-        }, function(error) {
+        }, function() {
             alert("Locatie ophalen mislukt");
         });
     } else {
-        alert("GPS wordt niet ondersteund");
+        alert("GPS niet ondersteund");
     }
 }
 </script>

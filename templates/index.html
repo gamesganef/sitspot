@@ -4,144 +4,107 @@
     <title>SitSpot</title>
     <link rel="stylesheet" href="/static/css/style.css">
 
-    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
 
-<header>
-    <h1>SitSpot</h1>
+<!-- 🔥 CLEAN HEADER -->
+<div class="mobile-header">
+    <h2>SitSpot</h2>
 
-    <form method="GET" style="display:flex; gap:5px;">
+    <form method="GET" class="search-bar">
         <input type="text" name="search" placeholder="Zoek locatie..." value="{{search}}">
-        <button class="btn">Zoek</button>
-
-        {% if search %}
-            <a href="/" class="btn">Reset</a>
-        {% endif %}
+        <button>🔍</button>
     </form>
+</div>
 
-    {% if session.get("user") %}
-        <span>Ingelogd als: {{ session.get("user") }}</span>
-
-        <a href="/favorites" class="btn">❤️ Favorieten</a>
-        <a href="/add" class="btn">+ Spot toevoegen</a>
-        <a href="/logout" class="btn">Logout</a>
-    {% else %}
-        <a href="/login" class="btn">Login</a>
-        <a href="/register" class="btn">Register</a>
-    {% endif %}
-</header>
-
+<!-- 🗺️ MAP -->
 <div id="map"></div>
 
-{% if search and spots|length == 0 %}
-    <p style="padding:10px;">❌ Geen resultaten gevonden voor "{{search}}"</p>
-{% endif %}
+<!-- 🔥 CTA -->
+<div class="cta">
+    <button class="big-btn" onclick="useMyLocation()">
+        📍 Spots bij mij in de buurt
+    </button>
+</div>
 
+<!-- 📍 SPOTS -->
 <div class="grid">
 
 {% for s in spots %}
-    <div class="card" style="position:relative;">
+    <div class="card" onclick="window.location='/spot/{{s[0]}}'">
 
-        {% if session.get("user") %}
-            <form action="{% if s[0] in favorites %}/unfavorite/{{s[0]}}{% else %}/favorite/{{s[0]}}{% endif %}"
-                  method="get"
-                  style="position:absolute; top:10px; right:10px; z-index:10;">
-                <button type="submit" style="background:none; border:none; font-size:20px; cursor:pointer;">
-                    {% if s[0] in favorites %}
-                        💔
-                    {% else %}
-                        ❤️
-                    {% endif %}
-                </button>
-            </form>
+        {% if images[s[0]] %}
+            <img src="/static/uploads/{{images[s[0]]}}">
+        {% else %}
+            <div class="no-img">📸 Geen foto</div>
         {% endif %}
 
-        <div onclick="window.location='/spot/{{s[0]}}'" style="cursor:pointer;">
+        <h3>{{s[1]}}</h3>
+        <p class="location">{{s[2]}}</p>
 
-            {% if images[s[0]] %}
-                <img src="/static/uploads/{{images[s[0]]}}">
-            {% endif %}
+        <p class="distance" id="dist-{{s[0]}}">📏 ...</p>
 
-            <h3>{{s[1]}}</h3>
-            <p>{{s[2]}}</p>
-
-            <p class="distance" id="dist-{{s[0]}}">📏 ...</p>
-
-            <!-- 🔥 FIXED STATUS -->
+        <div class="card-row">
             {% if s[7] %}
-                <p>🔴 Bezet</p>
+                <span class="occupied">🔴 Bezet</span>
             {% else %}
-                <p>🟢 Vrij</p>
+                <span class="free">🟢 Vrij</span>
             {% endif %}
 
-            {% set total = namespace(val=0, count=0) %}
-            {% for r in reviews %}
-                {% if r[0] == s[0] %}
-                    {% set total.val = total.val + r[1] %}
-                    {% set total.count = total.count + 1 %}
-                {% endif %}
-            {% endfor %}
-
-            {% if total.count > 0 %}
-                <p>⭐ {{ (total.val / total.count)|round(1) }}</p>
-            {% else %}
-                <p>⭐ Geen reviews</p>
+            {% if ratings[s[0]] %}
+                <span>⭐ {{ ratings[s[0]].avg|round(1) }}</span>
             {% endif %}
-
         </div>
+
     </div>
 {% endfor %}
 
 </div>
 
+<!-- 🔥 BOTTOM NAV -->
+<div class="bottom-nav">
+    <a href="/">🏠</a>
+    <a href="/favorites">❤️</a>
+    <a href="/add" class="add-btn">＋</a>
+    {% if session.get("user") %}
+        <a href="/logout">👤</a>
+    {% else %}
+        <a href="/login">👤</a>
+    {% endif %}
+</div>
+
 <script>
 var map = L.map('map').setView([52.37, 4.89], 7);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-{% if search %}
-var query = "{{search}}";
+// 📍 LOCATIE
+function useMyLocation(){
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(function(pos){
+            let lat = pos.coords.latitude;
+            let lng = pos.coords.longitude;
 
-fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(query))
-.then(res => res.json())
-.then(data => {
-    if (data.length > 0) {
-        var lat = data[0].lat;
-        var lon = data[0].lon;
+            map.setView([lat, lng], 14);
 
-        map.setView([lat, lon], 13);
-
-        L.marker([lat, lon]).addTo(map)
-            .bindPopup("📍 " + query)
-            .openPopup();
+            L.marker([lat, lng]).addTo(map)
+                .bindPopup("📍 Jij bent hier")
+                .openPopup();
+        });
     }
-});
-{% endif %}
+}
 
+// markers
 {% for s in spots %}
-    var color = "{{ 'red' if s[7] else 'green' }}";
-
-    var marker = L.circleMarker([{{s[4]}}, {{s[5]}}], {
-        color: color,
+    L.circleMarker([{{s[4]}}, {{s[5]}}], {
+        color: "{{ 'red' if s[7] else 'green' }}",
         radius: 8
     }).addTo(map);
-
-    marker.bindPopup(`
-        <b>{{s[1]}}</b><br>
-        {% if s[7] %}
-            🔴 Bezet<br>
-        {% else %}
-            🟢 Vrij<br>
-        {% endif %}
-        <a href="/spot/{{s[0]}}">Bekijk</a>
-    `);
 {% endfor %}
 
+// afstand
 function getDistance(lat1, lon1, lat2, lon2) {
     var R = 6371;
     var dLat = (lat2-lat1) * Math.PI / 180;
@@ -164,10 +127,8 @@ if (navigator.geolocation) {
 
         {% for s in spots %}
             var dist = getDistance(userLat, userLng, {{s[4]}}, {{s[5]}});
-            dist = dist.toFixed(1);
-
             document.getElementById("dist-{{s[0]}}").innerText =
-                "📏 " + dist + " km van jou";
+                "📏 " + dist.toFixed(1) + " km";
         {% endfor %}
 
     });

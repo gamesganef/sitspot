@@ -1,103 +1,59 @@
-/* BASIS */
 body {
-    background: #0f172a;
+    background: linear-gradient(180deg, #020617, #0f172a);
     color: white;
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', sans-serif;
     margin: 0;
+    padding-bottom: 80px;
 }
 
 /* HEADER */
-header {
+.top-header {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px;
     align-items: center;
-    justify-content: space-between;
-    background: #020617;
+    gap: 10px;
+    padding: 14px;
 }
 
-/* BUTTONS */
-.btn {
-    padding: 10px 14px;
-    border-radius: 8px;
-    background: #22c55e;
-    color: white;
-    text-decoration: none;
-    border: none;
-    cursor: pointer;
-}
-
-/* BACK BUTTON 🔥 */
+/* BACK BUTTON */
 .back-btn {
-    margin: 10px;
-    padding: 10px 14px;
-    background: #334155;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.back-btn:hover {
-    background: #1e293b;
-}
-
-/* GRID */
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 10px;
-    padding: 10px;
-}
-
-/* CARDS */
-.card {
-    background: #1e293b;
-    padding: 15px;
+    background: #22c55e;
+    padding: 8px 12px;
     border-radius: 10px;
     text-decoration: none;
     color: white;
-}
-
-/* MAP */
-#map {
-    height: 400px;
-    width: 100%;
-    margin: 10px 0;
-}
-
-/* SLIDER */
-.slider {
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-}
-
-img {
-    width: 300px;
-    border-radius: 10px;
 }
 
 /* FORM */
 .form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 20px;
+    gap: 14px;
+    padding: 12px;
 }
 
+/* CARD */
+.card {
+    background: rgba(30,41,59,0.7);
+    backdrop-filter: blur(10px);
+    padding: 16px;
+    border-radius: 16px;
+}
+
+/* LABEL */
 label {
-    font-weight: bold;
+    display: block;
     margin-top: 10px;
+    font-size: 14px;
+    color: #cbd5f5;
 }
 
+/* INPUTS */
 input, textarea {
     width: 100%;
-    padding: 10px;
-    margin: 5px 0 15px 0;
-    border-radius: 8px;
-    border: 1px solid #334155;
+    padding: 12px;
+    margin-top: 6px;
+    border-radius: 10px;
+    border: none;
     background: #1e293b;
     color: white;
 }
@@ -106,127 +62,62 @@ textarea {
     min-height: 80px;
 }
 
-form {
-    max-width: 400px;
-    margin: auto;
-    padding: 20px;
-}
-
-/* 📱 MOBILE */
-@media (max-width: 600px) {
-    header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .btn {
-        width: 100%;
-        text-align: center;
-    }
-
-    #map {
-        height: 250px;
-    }
-    .review-box {
-    background: #1e293b;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #334155;
-}
-
-.review-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-.review-text {
-    color: #cbd5f5;
-}
-
-.stars {
-    color: #facc15;
-}
-}
-body.mobile {
-    background: #0f172a;
-    color: white;
-    font-family: Arial;
-}
-
-/* HEADER */
-.header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 15px;
-    font-size: 18px;
-}
-
-/* IMAGES */
-.image-slider {
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-    padding: 10px;
-}
-
-.image-slider img {
-    width: 90%;
-    border-radius: 12px;
-}
-
-/* CARDS */
-.card {
-    background: #1e293b;
-    margin: 10px;
-    padding: 15px;
-    border-radius: 16px;
-}
-
 /* BUTTONS */
 .big-btn {
-    display: block;
     width: 100%;
-    padding: 14px;
-    margin-top: 10px;
+    padding: 16px;
+    border-radius: 14px;
     background: #22c55e;
-    border-radius: 12px;
-    text-align: center;
-    text-decoration: none;
-    color: white;
     border: none;
+    color: white;
     font-size: 16px;
-}
-
-.danger-btn {
-    background: #ef4444;
-    padding: 12px;
-    border-radius: 10px;
-    width: 100%;
-    border: none;
-    color: white;
-}
-
-/* STATUS */
-.free { color: #22c55e; }
-.occupied { color: #ef4444; }
-.you { color: #facc15; }
-
-/* REVIEWS */
-.review {
-    background: #020617;
-    padding: 10px;
-    border-radius: 10px;
+    cursor: pointer;
     margin-top: 10px;
 }
 
-/* TEXT */
-.location { color: #94a3b8; }
-.desc { margin-top: 5px; }
-.avg { font-size: 18px; margin-bottom: 10px; }
-.card a {
+.big-btn:active {
+    transform: scale(0.97);
+}
+
+.submit-btn {
+    margin: 10px;
+}
+
+/* BOTTOM NAV */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(2,6,23,0.95);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    border-top: 1px solid #1e293b;
+}
+
+.bottom-nav a {
     color: white;
+    font-size: 22px;
     text-decoration: none;
+}
+
+.add-btn {
+    background: #22c55e;
+    padding: 10px 16px;
+    border-radius: 50%;
+}
+#map {
+    height: 220px;
+    width: 100%;
+    margin: 10px 0;
+    border-radius: 16px;
+    overflow: hidden;
+}
+.card img {
+    width: 100%;
+    height: 160px;        /* 🔥 vaste hoogte */
+    object-fit: cover;    /* 🔥 belangrijk: crop i.p.v. uitrekken */
+    border-radius: 12px;
+    display: block;
 }

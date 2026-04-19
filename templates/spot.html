@@ -6,18 +6,25 @@
 </head>
 <body class="mobile">
 
-<div class="header">
-    <a href="/" class="back-btn">←</a>
+<!-- 🔥 HEADER -->
+<header>
+    <a href="/" class="btn">← Terug</a>
     <h2>{{s[1]}}</h2>
-</div>
+</header>
 
+<!-- 📸 IMAGES -->
 <div class="image-slider">
-    {% for i in imgs %}
-        <img src="{{ url_for('static', filename='uploads/' + i[0]) }}">
-    {% endfor %}
+    {% if imgs %}
+        {% for i in imgs %}
+            <img src="{{ url_for('static', filename='uploads/' + i[0]) }}">
+        {% endfor %}
+    {% else %}
+        <p style="padding:10px;">📸 Geen foto's</p>
+    {% endif %}
 </div>
 
-<div class="card main-card">
+<!-- 📍 MAIN -->
+<div class="card">
 
     <p class="location">📍 {{s[2]}}</p>
     <p class="desc">{{s[3]}}</p>
@@ -30,12 +37,16 @@
         🗺️ Route starten
     </a>
 
-    <!-- 🔥 STATUS FIX -->
-    <div class="status">
+    <!-- 🔥 STATUS -->
+    <div class="status" style="margin-top:10px;">
 
     {% if s[7] %}
         {% if s[7] == user %}
             <p class="you">🟡 Jij zit hier</p>
+
+            {% if remaining %}
+                <p id="timer">⏱️ Laden...</p>
+            {% endif %}
 
             <form method="POST" action="/leave/{{s[0]}}">
                 <button class="danger-btn">Ik ga weg</button>
@@ -43,6 +54,10 @@
 
         {% else %}
             <p class="occupied">🔴 Bezet door {{s[7]}}</p>
+
+            {% if remaining %}
+                <p id="timer">⏱️ Laden...</p>
+            {% endif %}
         {% endif %}
 
     {% else %}
@@ -57,10 +72,15 @@
 
 </div>
 
+<!-- ⭐ REVIEWS -->
 <div class="card">
 
+    <h3>⭐ Reviews</h3>
+
     {% if avg %}
-        <p class="avg">⭐ {{avg|round(1)}} / 5</p>
+        <p class="avg">Gemiddeld: {{avg|round(1)}} / 5</p>
+    {% else %}
+        <p class="avg">Nog geen reviews</p>
     {% endif %}
 
     {% if user %}
@@ -70,8 +90,6 @@
         <button class="big-btn">Plaatsen</button>
     </form>
     {% endif %}
-
-    <h3>Reviews</h3>
 
     {% for r in reviews %}
     <div class="review">
@@ -83,10 +101,57 @@
 
 </div>
 
-{% if user == s[6] or user == admin %}
-<form method="POST" action="/delete/{{s[0]}}">
-    <button class="danger-btn">Verwijder spot</button>
-</form>
+<!-- 🗑️ DELETE -->
+{% if user == s[6] %}
+<div class="card">
+    <form method="POST" action="/delete/{{s[0]}}">
+        <button class="danger-btn">Verwijder spot</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- 🔥 BOTTOM NAV -->
+<div class="bottom-nav">
+    <a href="/">🏠</a>
+    <a href="/favorites">❤️</a>
+    <a href="/add" class="add-btn">＋</a>
+    {% if session.get("user") %}
+        <a href="/logout">👤</a>
+    {% else %}
+        <a href="/login">👤</a>
+    {% endif %}
+</div>
+
+<!-- ⏱️ TIMER -->
+{% if remaining %}
+<script>
+let time = {{ remaining }};
+
+function updateTimer() {
+    const el = document.getElementById("timer");
+
+    if (!el) return;
+
+    if (time <= 0) {
+        el.innerText = "⏱️ Vrij";
+        return;
+    }
+
+    let hours = Math.floor(time / 3600);
+    let minutes = Math.floor((time % 3600) / 60);
+    let seconds = time % 60;
+
+    el.innerText = "⏱️ " +
+        (hours > 0 ? hours + "u " : "") +
+        minutes + "m " +
+        seconds + "s";
+
+    time--;
+    setTimeout(updateTimer, 1000);
+}
+
+updateTimer();
+</script>
 {% endif %}
 
 </body>
