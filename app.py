@@ -3,23 +3,42 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+from PIL import Image
 
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-UPLOAD_FOLDER = os.path.join(app.root_path, "static/uploads")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static/uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 def get_db():
-    return sqlite3.connect("database.db")
+    return sqlite3.connect(os.path.join(BASE_DIR, "database.db"))
 
 
-# 🔥 HOME (MET ZOEK + FAVORIETEN)
+# 🔥 HOME
 @app.route("/")
 def index():
     db = get_db()
     c = db.cursor()
+
+    now = datetime.now()
+
+    c.execute("""
+        UPDATE spots
+        SET occupied_by=NULL, occupied_until=NULL
+        WHERE occupied_until IS NOT NULL AND occupied_until < ?
+    """, (now,))
+
+    c.execute("""
+        UPDATE spots
+        SET occupied_by=NULL
+        WHERE occupied_by='' OR occupied_by='None'
+    """)
+
+    db.commit()
 
     search = request.args.get("search")
 
@@ -33,23 +52,23 @@ def index():
 
     reviews = c.execute("SELECT spot_id, rating FROM ratings").fetchall()
 
-    # 🔥 FAVORIETEN OPHALEN
     favorites = []
     if "user" in session:
-        favorites = c.execute(
-            "SELECT spot_id FROM favorites WHERE username=?",
-            (session["user"],)
-        ).fetchall()
-        favorites = [f[0] for f in favorites]
+        try:
+            favs = c.execute(
+                "SELECT spot_id FROM favorites WHERE username=?",
+                (session["user"],)
+            ).fetchall()
+            favorites = [f[0] for f in favs]
+        except:
+            favorites = []
 
     images = {}
-
     for s in spots:
         img = c.execute(
             "SELECT filename FROM images WHERE spot_id=? LIMIT 1",
             (s[0],)
         ).fetchone()
-
         images[s[0]] = img[0] if img else None
 
     return render_template(
@@ -62,6 +81,24 @@ def index():
     )
 
 
+# ❤️ FAVORITES PAGE
+@app.route("/favorites")
+def favorites_page():
+    if "user" not in session:
+        return redirect("/login")
+
+    db = get_db()
+    c = db.cursor()
+
+    spots = c.execute("""
+        SELECT s.* FROM spots s
+        JOIN favorites f ON s.id = f.spot_id
+        WHERE f.username=?
+    """, (session["user"],)).fetchall()
+
+    return render_template("favorites.html", spots=spots)
+
+
 # ❤️ ADD FAVORITE
 @app.route("/favorite/<int:id>")
 def favorite(id):
@@ -71,12 +108,15 @@ def favorite(id):
     db = get_db()
     c = db.cursor()
 
-    c.execute("""
-        INSERT INTO favorites (username, spot_id)
-        VALUES (?, ?)
-    """, (session["user"], id))
+    try:
+        c.execute(
+            "INSERT INTO favorites (username, spot_id) VALUES (?, ?)",
+            (session["user"], id)
+        )
+        db.commit()
+    except Exception as e:
+        print("FAVORITE ERROR:", e)
 
-    db.commit()
     return redirect("/")
 
 
@@ -89,12 +129,81 @@ def unfavorite(id):
     db = get_db()
     c = db.cursor()
 
+    c.execute(
+        "DELETE FROM favorites WHERE username=? AND spot_id=?",
+        (session["user"], id)
+    )
+    db.commit()
+
+    return redirect("/")
+
+
+# 🔥 OCCUPY
+@app.route("/occupy/<int:id>", methods=["POST"])
+def occupy(id):
+    if "user" not in session:
+        return redirect("/login")
+
+    db = get_db()
+    c = db.cursor()
+
+    until = datetime.now() + timedelta(hours=2)
+
     c.execute("""
-        DELETE FROM favorites
-        WHERE username=? AND spot_id=?
-    """, (session["user"], id))
+        UPDATE spots
+        SET occupied_by=?, occupied_until=?
+        WHERE id=?
+    """, (session["user"], until, id))
 
     db.commit()
+    return redirect(f"/spot/{id}")
+
+
+# 🔥 LEAVE
+@app.route("/leave/<int:id>", methods=["POST"])
+def leave(id):
+    if "user" not in session:
+        return redirect("/login")
+
+    db = get_db()
+    c = db.cursor()
+
+    c.execute("""
+        UPDATE spots
+        SET occupied_by=NULL, occupied_until=NULL
+        WHERE id=?
+    """, (id,))
+
+    db.commit()
+    return redirect(f"/spot/{id}")
+
+
+# 🔥 DELETE SPOT
+@app.route("/delete/<int:id>", methods=["POST"])
+def delete(id):
+    if "user" not in session:
+        return redirect("/login")
+
+    db = get_db()
+    c = db.cursor()
+
+    spot = c.execute("SELECT username FROM spots WHERE id=?", (id,)).fetchone()
+
+    if not spot:
+        return redirect("/")
+
+    if spot[0] != session["user"]:
+        return "Niet toegestaan"
+
+    try:
+        c.execute("DELETE FROM ratings WHERE spot_id=?", (id,))
+        c.execute("DELETE FROM images WHERE spot_id=?", (id,))
+        c.execute("DELETE FROM favorites WHERE spot_id=?", (id,))
+        c.execute("DELETE FROM spots WHERE id=?", (id,))
+        db.commit()
+    except Exception as e:
+        print("DELETE ERROR:", e)
+
     return redirect("/")
 
 
@@ -112,7 +221,10 @@ def register():
         if existing:
             return "Email bestaat al"
 
-        c.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email, password))
+        c.execute(
+            "INSERT INTO users (email, password) VALUES (?, ?)",
+            (email, password)
+        )
         db.commit()
 
         return redirect("/login")
@@ -151,7 +263,7 @@ def logout():
     return redirect("/")
 
 
-# ADD SPOT
+# 🔥 ADD SPOT (FIXED MET COMPRESSIE)
 @app.route("/add", methods=["GET", "POST"])
 def add():
     if "user" not in session:
@@ -168,26 +280,36 @@ def add():
         c = db.cursor()
 
         c.execute("""
-            INSERT INTO spots (name, location, description, lat, lng, username)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO spots (
+                name, location, description, lat, lng, username,
+                occupied_by, occupied_until
+            )
+            VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
         """, (name, location, description, lat, lng, session["user"]))
 
         spot_id = c.lastrowid
 
         files = request.files.getlist("images")
 
-        for file in files:
+        for i, file in enumerate(files):
             if file and file.filename != "":
-                filename = secure_filename(file.filename)
-                filename = f"{spot_id}_{filename}"
-
+                filename = f"{spot_id}_{i}.jpg"
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
-                file.save(filepath)
 
-                c.execute("""
-                    INSERT INTO images (spot_id, filename)
-                    VALUES (?, ?)
-                """, (spot_id, filename))
+                print("🔥 COMPRESSIE ACTIEF:", filename)
+
+                img = Image.open(file)
+
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+
+                img.thumbnail((1280, 1280))
+                img.save(filepath, "JPEG", quality=40, optimize=True)
+
+                c.execute(
+                    "INSERT INTO images (spot_id, filename) VALUES (?, ?)",
+                    (spot_id, filename)
+                )
 
         db.commit()
         return redirect("/")
@@ -203,17 +325,16 @@ def spot(id):
 
     s = c.execute("SELECT * FROM spots WHERE id=?", (id,)).fetchone()
 
-    occupied_by = s[7] if len(s) > 7 else None
-
     reviews = c.execute("""
         SELECT username, rating, comment
         FROM ratings
         WHERE spot_id=?
     """, (id,)).fetchall()
 
-    imgs = c.execute("""
-        SELECT filename FROM images WHERE spot_id=?
-    """, (id,)).fetchall()
+    imgs = c.execute(
+        "SELECT filename FROM images WHERE spot_id=?",
+        (id,)
+    ).fetchall()
 
     ratings = [r[1] for r in reviews]
     avg = sum(ratings) / len(ratings) if ratings else None
@@ -224,88 +345,8 @@ def spot(id):
         reviews=reviews,
         imgs=imgs,
         avg=avg,
-        user=session.get("user"),
-        occupied_by=occupied_by,
-        admin="admin"
+        user=session.get("user")
     )
-
-
-# OCCUPY
-@app.route("/occupy/<int:id>", methods=["POST"])
-def occupy(id):
-    if "user" not in session:
-        return redirect("/login")
-
-    db = get_db()
-    c = db.cursor()
-
-    until = datetime.now() + timedelta(hours=2)
-
-    c.execute("""
-        UPDATE spots
-        SET occupied_by=?, occupied_until=?
-        WHERE id=?
-    """, (session["user"], until, id))
-
-    db.commit()
-    return redirect(f"/spot/{id}")
-
-
-# LEAVE
-@app.route("/leave/<int:id>", methods=["POST"])
-def leave(id):
-    if "user" not in session:
-        return redirect("/login")
-
-    db = get_db()
-    c = db.cursor()
-
-    c.execute("""
-        UPDATE spots
-        SET occupied_by=NULL, occupied_until=NULL
-        WHERE id=?
-    """, (id,))
-
-    db.commit()
-    return redirect(f"/spot/{id}")
-
-
-# REVIEW
-@app.route("/rate/<int:id>", methods=["POST"])
-def rate(id):
-    if "user" not in session:
-        return redirect("/login")
-
-    rating = int(request.form["rating"])
-    comment = request.form["comment"]
-
-    db = get_db()
-    c = db.cursor()
-
-    c.execute("""
-        INSERT INTO ratings (spot_id, username, rating, comment)
-        VALUES (?, ?, ?, ?)
-    """, (id, session["user"], rating, comment))
-
-    db.commit()
-    return redirect(f"/spot/{id}")
-
-
-# DELETE
-@app.route("/delete/<int:id>", methods=["POST"])
-def delete(id):
-    if "user" not in session:
-        return redirect("/login")
-
-    db = get_db()
-    c = db.cursor()
-
-    c.execute("DELETE FROM spots WHERE id=?", (id,))
-    c.execute("DELETE FROM ratings WHERE spot_id=?", (id,))
-    c.execute("DELETE FROM images WHERE spot_id=?", (id,))
-
-    db.commit()
-    return redirect("/")
 
 
 if __name__ == "__main__":

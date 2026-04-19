@@ -6,26 +6,22 @@
 </head>
 <body class="mobile">
 
-<!-- HEADER -->
 <div class="header">
     <a href="/" class="back-btn">←</a>
     <h2>{{s[1]}}</h2>
 </div>
 
-<!-- IMAGE SLIDER -->
 <div class="image-slider">
     {% for i in imgs %}
         <img src="{{ url_for('static', filename='uploads/' + i[0]) }}">
     {% endfor %}
 </div>
 
-<!-- MAIN CARD -->
 <div class="card main-card">
 
     <p class="location">📍 {{s[2]}}</p>
     <p class="desc">{{s[3]}}</p>
 
-    <!-- 🗺️ MAP BUTTON (GEFIXT) -->
     <a
       href="https://www.google.com/maps/dir/?api=1&destination={{s[4]}},{{s[5]}}"
       target="_blank"
@@ -34,30 +30,33 @@
         🗺️ Route starten
     </a>
 
-    <!-- STATUS -->
+    <!-- 🔥 STATUS FIX -->
     <div class="status">
-    {% if occupied_by %}
-        {% if occupied_by == user %}
+
+    {% if s[7] %}
+        {% if s[7] == user %}
             <p class="you">🟡 Jij zit hier</p>
+
             <form method="POST" action="/leave/{{s[0]}}">
                 <button class="danger-btn">Ik ga weg</button>
             </form>
+
         {% else %}
-            <p class="occupied">🔴 Bezet door {{occupied_by}}</p>
+            <p class="occupied">🔴 Bezet door {{s[7]}}</p>
         {% endif %}
+
     {% else %}
         <p class="free">🟢 Vrij</p>
-        <form method="POST" action="/occupy/{{s[0]}}" onsubmit="getLocation(event, this)">
-            <input type="hidden" name="user_lat">
-            <input type="hidden" name="user_lng">
+
+        <form method="POST" action="/occupy/{{s[0]}}">
             <button class="big-btn">Ik zit hier</button>
         </form>
     {% endif %}
+
     </div>
 
 </div>
 
-<!-- REVIEWS -->
 <div class="card">
 
     {% if avg %}
@@ -84,25 +83,11 @@
 
 </div>
 
-<!-- DELETE -->
 {% if user == s[6] or user == admin %}
 <form method="POST" action="/delete/{{s[0]}}">
     <button class="danger-btn">Verwijder spot</button>
 </form>
 {% endif %}
-
-<script>
-function getLocation(event, form) {
-    event.preventDefault();
-    navigator.geolocation.getCurrentPosition(function(pos) {
-        form.user_lat.value = pos.coords.latitude;
-        form.user_lng.value = pos.coords.longitude;
-        form.submit();
-    }, function() {
-        alert("Locatie nodig");
-    });
-}
-</script>
 
 </body>
 </html>

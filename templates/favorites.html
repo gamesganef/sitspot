@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Favorieten</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<header>
+    <h1>❤️ Mijn Favorieten</h1>
+    <a href="/" class="btn">← Terug</a>
+</header>
+
+<div class="grid">
+
+{% for s in spots %}
+    <div class="card">
+
+        <a href="/spot/{{s[0]}}">
+            <h3>{{s[1]}}</h3>
+            <p>{{s[2]}}</p>
+        </a>
+
+        <!-- 💔 UNFAVORITE -->
+        <a href="/unfavorite/{{s[0]}}" class="btn" style="margin-top:10px;">
+            💔 Verwijder
+        </a>
+
+    </div>
+{% endfor %}
+
+{% if spots|length == 0 %}
+    <p style="padding:10px;">Je hebt nog geen favorieten.</p>
+{% endif %}
+
+</div>
+
+</body>
+</html>

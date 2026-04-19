@@ -13,7 +13,6 @@
 <header>
     <h1>SitSpot</h1>
 
-    <!-- 🔍 ZOEK + RESET -->
     <form method="GET" style="display:flex; gap:5px;">
         <input type="text" name="search" placeholder="Zoek locatie..." value="{{search}}">
         <button class="btn">Zoek</button>
@@ -25,6 +24,8 @@
 
     {% if session.get("user") %}
         <span>Ingelogd als: {{ session.get("user") }}</span>
+
+        <a href="/favorites" class="btn">❤️ Favorieten</a>
         <a href="/add" class="btn">+ Spot toevoegen</a>
         <a href="/logout" class="btn">Logout</a>
     {% else %}
@@ -33,34 +34,33 @@
     {% endif %}
 </header>
 
-<!-- KAART -->
 <div id="map"></div>
 
-<!-- ❌ GEEN RESULTATEN -->
 {% if search and spots|length == 0 %}
     <p style="padding:10px;">❌ Geen resultaten gevonden voor "{{search}}"</p>
 {% endif %}
 
-<!-- SPOTS GRID -->
 <div class="grid">
 
 {% for s in spots %}
     <div class="card" style="position:relative;">
 
-        <!-- ❤️ FAVORIET -->
         {% if session.get("user") %}
-            <div style="position:absolute; top:10px; right:10px; font-size:20px;">
-                {% if s[0] in favorites %}
-                    <a href="/unfavorite/{{s[0]}}" style="text-decoration:none;">💔</a>
-                {% else %}
-                    <a href="/favorite/{{s[0]}}" style="text-decoration:none;">❤️</a>
-                {% endif %}
-            </div>
+            <form action="{% if s[0] in favorites %}/unfavorite/{{s[0]}}{% else %}/favorite/{{s[0]}}{% endif %}"
+                  method="get"
+                  style="position:absolute; top:10px; right:10px; z-index:10;">
+                <button type="submit" style="background:none; border:none; font-size:20px; cursor:pointer;">
+                    {% if s[0] in favorites %}
+                        💔
+                    {% else %}
+                        ❤️
+                    {% endif %}
+                </button>
+            </form>
         {% endif %}
 
-        <a href="/spot/{{s[0]}}">
+        <div onclick="window.location='/spot/{{s[0]}}'" style="cursor:pointer;">
 
-            <!-- FOTO -->
             {% if images[s[0]] %}
                 <img src="/static/uploads/{{images[s[0]]}}">
             {% endif %}
@@ -68,17 +68,15 @@
             <h3>{{s[1]}}</h3>
             <p>{{s[2]}}</p>
 
-            <!-- 📏 AFSTAND -->
             <p class="distance" id="dist-{{s[0]}}">📏 ...</p>
 
-            <!-- STATUS -->
-            {% if s[8] %}
+            <!-- 🔥 FIXED STATUS -->
+            {% if s[7] %}
                 <p>🔴 Bezet</p>
             {% else %}
                 <p>🟢 Vrij</p>
             {% endif %}
 
-            <!-- RATING -->
             {% set total = namespace(val=0, count=0) %}
             {% for r in reviews %}
                 {% if r[0] == s[0] %}
@@ -93,13 +91,12 @@
                 <p>⭐ Geen reviews</p>
             {% endif %}
 
-        </a>
+        </div>
     </div>
 {% endfor %}
 
 </div>
 
-<!-- MAP SCRIPT -->
 <script>
 var map = L.map('map').setView([52.37, 4.89], 7);
 
@@ -107,7 +104,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
-// 🔥 ZOOM NAAR GEZOCHTE LOCATIE
 {% if search %}
 var query = "{{search}}";
 
@@ -127,9 +123,8 @@ fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURICom
 });
 {% endif %}
 
-// 🔥 MARKERS
 {% for s in spots %}
-    var color = "{{ 'red' if s[8] else 'green' }}";
+    var color = "{{ 'red' if s[7] else 'green' }}";
 
     var marker = L.circleMarker([{{s[4]}}, {{s[5]}}], {
         color: color,
@@ -138,7 +133,7 @@ fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURICom
 
     marker.bindPopup(`
         <b>{{s[1]}}</b><br>
-        {% if s[8] %}
+        {% if s[7] %}
             🔴 Bezet<br>
         {% else %}
             🟢 Vrij<br>
@@ -147,7 +142,6 @@ fetch("https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURICom
     `);
 {% endfor %}
 
-// 🔥 AFSTAND
 function getDistance(lat1, lon1, lat2, lon2) {
     var R = 6371;
     var dLat = (lat2-lat1) * Math.PI / 180;
