@@ -6,15 +6,27 @@ body {
     padding-bottom: 80px;
 }
 
-/* HEADER */
-.top-header {
+/* 🔥 HEADER */
+header {
     display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
     align-items: center;
-    gap: 10px;
-    padding: 14px;
+    justify-content: space-between;
+    background: rgba(2,6,23,0.8);
+    backdrop-filter: blur(10px);
 }
 
-/* BACK BUTTON */
+header input {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: #1e293b;
+    color: white;
+}
+
+/* 🔙 BACK BUTTON */
 .back-btn {
     background: #22c55e;
     padding: 8px 12px;
@@ -23,46 +35,17 @@ body {
     color: white;
 }
 
-/* FORM */
-.form {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 12px;
-}
-
-/* CARD */
-.card {
-    background: rgba(30,41,59,0.7);
-    backdrop-filter: blur(10px);
-    padding: 16px;
-    border-radius: 16px;
-}
-
-/* LABEL */
-label {
-    display: block;
-    margin-top: 10px;
-    font-size: 14px;
-    color: #cbd5f5;
-}
-
-/* INPUTS */
-input, textarea {
-    width: 100%;
-    padding: 12px;
-    margin-top: 6px;
+/* 🔥 BUTTONS */
+.btn {
+    padding: 8px 12px;
     border-radius: 10px;
+    background: #22c55e;
     border: none;
-    background: #1e293b;
     color: white;
+    text-decoration: none;
+    cursor: pointer;
 }
 
-textarea {
-    min-height: 80px;
-}
-
-/* BUTTONS */
 .big-btn {
     width: 100%;
     padding: 16px;
@@ -79,11 +62,117 @@ textarea {
     transform: scale(0.97);
 }
 
+/* 🔥 FORM */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 12px;
+}
+
+/* 🔥 CARD */
+.card {
+    background: rgba(30,41,59,0.7);
+    backdrop-filter: blur(10px);
+    padding: 16px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.card:active {
+    transform: scale(0.97);
+}
+
+/* 📸 IMAGE */
+.card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 12px;
+    display: block;
+}
+
+/* 📸 NO IMAGE */
+.no-img {
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f172a;
+    border-radius: 12px;
+}
+
+/* 🔥 GRID */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 12px;
+}
+
+/* 🔥 DISTANCE */
+.distance {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+/* 🔥 STATUS */
+.free {
+    color: #22c55e;
+    font-weight: bold;
+}
+
+.occupied {
+    color: #ef4444;
+    font-weight: bold;
+}
+
+/* 🔥 CARD ROW */
+.card-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+}
+
+/* 🔥 MAP */
+#map {
+    height: 220px;
+    width: 100%;
+    margin: 10px 0;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+/* 🔥 INPUTS */
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+    border-radius: 10px;
+    border: none;
+    background: #1e293b;
+    color: white;
+}
+
+textarea {
+    min-height: 80px;
+}
+
+/* 🔥 LABEL */
+label {
+    display: block;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #cbd5f5;
+}
+
+/* 🔥 SUBMIT */
 .submit-btn {
     margin: 10px;
 }
 
-/* BOTTOM NAV */
+/* 🔥 BOTTOM NAV */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -94,6 +183,7 @@ textarea {
     justify-content: space-around;
     padding: 10px 0;
     border-top: 1px solid #1e293b;
+    z-index: 100;
 }
 
 .bottom-nav a {
@@ -107,17 +197,16 @@ textarea {
     padding: 10px 16px;
     border-radius: 50%;
 }
-#map {
-    height: 220px;
-    width: 100%;
-    margin: 10px 0;
-    border-radius: 16px;
-    overflow: hidden;
+
+.card {
+    margin-bottom: 10px;
 }
-.card img {
-    width: 100%;
-    height: 160px;        /* 🔥 vaste hoogte */
-    object-fit: cover;    /* 🔥 belangrijk: crop i.p.v. uitrekken */
-    border-radius: 12px;
-    display: block;
+
+.big-btn {
+    font-size: 17px;
+    padding: 16px;
+}
+
+header {
+    gap: 10px;
 }

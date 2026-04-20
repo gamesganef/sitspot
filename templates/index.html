@@ -2,137 +2,153 @@
 <html>
 <head>
     <title>SitSpot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5850476951105682"
+     crossorigin="anonymous"></script>
+     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5850476951105682"
+     crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
 
-<!-- 🔥 CLEAN HEADER -->
-<div class="mobile-header">
-    <h2>SitSpot</h2>
+<header>
+    <h1>SitSpot</h1>
 
-    <form method="GET" class="search-bar">
+    <form method="GET" style="display:flex; gap:5px;">
         <input type="text" name="search" placeholder="Zoek locatie..." value="{{search}}">
-        <button>🔍</button>
-    </form>
-</div>
+        <button class="btn">Zoek</button>
 
-<!-- 🗺️ MAP -->
+        {% if search %}
+            <a href="/" class="btn">Reset</a>
+        {% endif %}
+    </form>
+
+    <!-- 🔥 NEAR ME -->
+    <button class="btn" onclick="getLocationAndReload()">📍 Near me</button>
+
+    {% if session.get("user") %}
+        <span>Ingelogd als: {{ session.get("user") }}</span>
+
+        <a href="/favorites" class="btn">❤️ Favorieten</a>
+        <a href="/add" class="btn">+ Spot toevoegen</a>
+        <a href="/logout" class="btn">Logout</a>
+    {% else %}
+        <a href="/login" class="btn">Login</a>
+        <a href="/register" class="btn">Register</a>
+    {% endif %}
+</header>
+
 <div id="map"></div>
 
-<!-- 🔥 CTA -->
-<div class="cta">
-    <button class="big-btn" onclick="useMyLocation()">
-        📍 Spots bij mij in de buurt
-    </button>
-</div>
+{% if search and spots|length == 0 %}
+    <p style="padding:10px;">❌ Geen resultaten gevonden voor "{{search}}"</p>
+{% endif %}
 
-<!-- 📍 SPOTS -->
 <div class="grid">
 
-{% for s in spots %}
-    <div class="card" onclick="window.location='/spot/{{s[0]}}'">
+{% for item in spots %}
+{% set s = item.data %}
 
-        {% if images[s[0]] %}
-            <img src="/static/uploads/{{images[s[0]]}}">
-        {% else %}
-            <div class="no-img">📸 Geen foto</div>
+    <div class="card" style="position:relative;">
+
+        <!-- ❤️ FAVORITE -->
+        {% if session.get("user") %}
+            <form action="{% if s[0] in favorites %}/unfavorite/{{s[0]}}{% else %}/favorite/{{s[0]}}{% endif %}"
+                  method="get"
+                  style="position:absolute; top:10px; right:10px; z-index:10;">
+                <button type="submit" style="background:none; border:none; font-size:20px; cursor:pointer;">
+                    {% if s[0] in favorites %}
+                        💔
+                    {% else %}
+                        ❤️
+                    {% endif %}
+                </button>
+            </form>
         {% endif %}
 
-        <h3>{{s[1]}}</h3>
-        <p class="location">{{s[2]}}</p>
+        <div onclick="window.location='/spot/{{s[0]}}'" style="cursor:pointer;">
 
-        <p class="distance" id="dist-{{s[0]}}">📏 ...</p>
+            <!-- 📸 IMAGE -->
+            {% if images[s[0]] %}
+                <img src="/static/uploads/{{images[s[0]]}}">
+            {% endif %}
 
-        <div class="card-row">
-            {% if s[7] %}
-                <span class="occupied">🔴 Bezet</span>
+            <h3>{{s[1]}}</h3>
+            <p>{{s[2]}}</p>
+
+            <!-- 🔥 DISTANCE -->
+            {% if item.distance %}
+                <p class="distance">📏 {{ item.distance|round(1) }} km van jou</p>
             {% else %}
-                <span class="free">🟢 Vrij</span>
+                <p class="distance">📏 Laden...</p>
             {% endif %}
 
+            <!-- STATUS -->
+            {% if s[7] %}
+                <p class="occupied">🔴 Bezet</p>
+            {% else %}
+                <p class="free">🟢 Vrij</p>
+            {% endif %}
+
+            <!-- ⭐ RATINGS -->
             {% if ratings[s[0]] %}
-                <span>⭐ {{ ratings[s[0]].avg|round(1) }}</span>
+                <p>⭐ {{ ratings[s[0]].avg|round(1) }} ({{ ratings[s[0]].count }})</p>
+            {% else %}
+                <p>⭐ Geen reviews</p>
             {% endif %}
-        </div>
 
+        </div>
     </div>
+
 {% endfor %}
 
-</div>
-
-<!-- 🔥 BOTTOM NAV -->
-<div class="bottom-nav">
-    <a href="/">🏠</a>
-    <a href="/favorites">❤️</a>
-    <a href="/add" class="add-btn">＋</a>
-    {% if session.get("user") %}
-        <a href="/logout">👤</a>
-    {% else %}
-        <a href="/login">👤</a>
-    {% endif %}
 </div>
 
 <script>
 var map = L.map('map').setView([52.37, 4.89], 7);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+}).addTo(map);
 
-// 📍 LOCATIE
-function useMyLocation(){
+// 🔥 NEAR ME BUTTON
+function getLocationAndReload(){
     if(navigator.geolocation){
         navigator.geolocation.getCurrentPosition(function(pos){
             let lat = pos.coords.latitude;
             let lng = pos.coords.longitude;
 
-            map.setView([lat, lng], 14);
+            window.location.href = "/?lat=" + lat + "&lng=" + lng;
+        });
+    }
+}
 
-            L.marker([lat, lng]).addTo(map)
-                .bindPopup("📍 Jij bent hier")
-                .openPopup();
+// 🔥 AUTO LOCATION BIJ OPENEN (FIX VOOR "...")
+if (!window.location.search.includes("lat=")) {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            let lat = pos.coords.latitude;
+            let lng = pos.coords.longitude;
+
+            window.location.href = "/?lat=" + lat + "&lng=" + lng;
         });
     }
 }
 
 // markers
-{% for s in spots %}
+{% for item in spots %}
+{% set s = item.data %}
+    var color = "{{ 'red' if s[7] else 'green' }}";
+
     L.circleMarker([{{s[4]}}, {{s[5]}}], {
-        color: "{{ 'red' if s[7] else 'green' }}",
+        color: color,
         radius: 8
     }).addTo(map);
 {% endfor %}
-
-// afstand
-function getDistance(lat1, lon1, lat2, lon2) {
-    var R = 6371;
-    var dLat = (lat2-lat1) * Math.PI / 180;
-    var dLon = (lon2-lon1) * Math.PI / 180;
-
-    var a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-
-    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
-
-if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(pos) {
-
-        var userLat = pos.coords.latitude;
-        var userLng = pos.coords.longitude;
-
-        {% for s in spots %}
-            var dist = getDistance(userLat, userLng, {{s[4]}}, {{s[5]}});
-            document.getElementById("dist-{{s[0]}}").innerText =
-                "📏 " + dist.toFixed(1) + " km";
-        {% endfor %}
-
-    });
-}
 </script>
 
 </body>
