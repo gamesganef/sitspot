@@ -1,139 +1,139 @@
-import requests
-import sqlite3
+import json
 import os
+import sqlite3
 import time
+import requests
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "database.db")
 
-# 📍 Alleen jouw regio
-areas = [
-    (53.18, 6.50, 53.24, 6.62),  # Groningen
-    (52.98, 6.50, 53.05, 6.62),  # Assen
-]
+headers = {"User-Agent": "SitSpotApp/1.0 (contact: sitspot@gmail.com)"}
 
-# 🔁 fallback servers
-URLS = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter"
-]
+BATCH_SIZE = 100
+SLEEP_TIME = 1
 
-headers = {
-    "User-Agent": "SitSpotApp/1.0"
-}
 
-# 🔥 betere straatnaam functie
 def get_street(lat, lon):
     try:
+        # ✅ JUISTE API
         url = f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}"
         res = requests.get(url, headers=headers, timeout=10)
-        data = res.json()
 
+        if res.status_code != 200:
+            return "Onbekende locatie"
+
+        data = res.json()
         addr = data.get("address", {})
 
-        road = addr.get("road") or addr.get("pedestrian") or addr.get("footway")
-        city = addr.get("city") or addr.get("town") or addr.get("village")
+        road = (
+            addr.get("road")
+            or addr.get("pedestrian")
+            or addr.get("footway")
+            or addr.get("cycleway")
+            or addr.get("path")
+        )
 
-        if road and city:
-            return f"{road}, {city}"
-        elif road:
+        area = (
+            addr.get("neighbourhood")
+            or addr.get("suburb")
+            or addr.get("city_district")
+            or addr.get("village")
+            or addr.get("town")
+            or addr.get("city")
+        )
+
+        # 🌳 natuur / park
+        if addr.get("park") or addr.get("leisure") == "park":
+            return f"Park {area}" if area else "Park"
+
+        if addr.get("nature_reserve") or addr.get("natural"):
+            return f"Natuurgebied {area}" if area else "Natuurgebied"
+
+        if addr.get("landuse") == "forest":
+            return f"Bosgebied {area}" if area else "Bosgebied"
+
+        # normaal
+        if road and area:
+            return f"{road}, {area}"
+        if area:
+            return area
+        if road:
             return road
-        elif city:
-            return city
-        else:
-            return "Onbekend"
 
-    except:
-        return "Onbekend"
+        # fallback
+        display_name = data.get("display_name")
+        if display_name:
+            return display_name.split(",")[0]
+
+        return "Onbekende locatie"
+
+    except Exception as e:
+        print("API fout:", e)
+        return "Onbekende locatie"
 
 
 db = sqlite3.connect(DB_PATH)
 c = db.cursor()
 
-total_added = 0
+total_updated = 0
 
-for area in areas:
-    print(f"\n📍 Area: {area}")
+print("🚀 Script gestart: Willekeurige bankjes worden gezocht...")
 
-    query = f"""
-    [out:json];
-    node["amenity"="bench"]({area[0]},{area[1]},{area[2]},{area[3]});
-    out;
-    """
+try:
+    while True:
+        rows = c.execute(
+            """
+            SELECT id, lat, lng
+            FROM spots
+            WHERE name='🪑 Bankje'
+            AND lat BETWEEN 50.75 AND 53.7
+            AND lng BETWEEN 3.35 AND 7.22
+            ORDER BY RANDOM()
+            LIMIT ?
+        """,
+            (BATCH_SIZE,),
+        ).fetchall()
 
-    data = None
-
-    # 🔁 probeer meerdere servers
-    for url in URLS:
-        try:
-            print(f"🌐 {url}")
-
-            res = requests.post(url, data=query, headers=headers, timeout=30)
-
-            if res.status_code != 200:
-                print("❌ status:", res.status_code)
-                continue
-
-            data = res.json()
-            print("✅ success")
+        if not rows:
+            print("\n🔥 KLAAR! Geen onbewerkte bankjes meer gevonden in NL.")
             break
 
-        except Exception as e:
-            print("⚠️ fout:", e)
-            continue
+        print(f"\n🔄 Batch gestart (Aantal: {len(rows)})")
 
-    if not data:
-        print("❌ skip area")
-        continue
+        updated = 0
 
-    added = 0
+        for spot_id, lat, lng in rows:
+            street = get_street(lat, lng)
 
-    for el in data.get("elements", []):
-        lat = el.get("lat")
-        lon = el.get("lon")
+            name = f"🪑 Bankje – {street}"
 
-        if not lat or not lon:
-            continue
-
-        # 🔍 duplicate check
-        existing = c.execute(
-            "SELECT id FROM spots WHERE lat=? AND lng=?",
-            (lat, lon)
-        ).fetchone()
-
-        if existing:
-            continue
-
-        # 🧠 straat ophalen
-        street = get_street(lat, lon)
-
-        name = f"🪑 Bankje – {street}"
-
-        c.execute("""
-            INSERT INTO spots (
-                name, location, description, lat, lng, username,
-                occupied_by, occupied_until
+            c.execute(
+                """
+                UPDATE spots
+                SET name=?, location=?
+                WHERE id=?
+            """,
+                (name, street, spot_id),
             )
-            VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
-        """, (
-            name,
-            street,  # 🔥 belangrijk → search werkt nu
-            "Bankje in jouw regio",
-            lat,
-            lon,
-            "system"
-        ))
 
-        added += 1
-        total_added += 1
+            updated += 1
+            total_updated += 1
 
-        print(f"➕ {name}")
+            print(f"✔ {name}")
 
-        time.sleep(1)  # 🔥 rate limit (belangrijk)
+            time.sleep(SLEEP_TIME)
 
-    print(f"✔ toegevoegd in area: {added}")
+        db.commit()
 
-db.commit()
-db.close()
+        print(f"✔ Batch klaar: {updated}")
+        print(f"🔥 Totaal: {total_updated}")
 
-print(f"\n🔥 TOTAAL TOEGEVOEGD: {total_added}")
+        time.sleep(2)
+
+except KeyboardInterrupt:
+    print("\n🛑 Gestopt")
+
+finally:
+    db.commit()
+    db.close()
+    print("🔒 Database gesloten")

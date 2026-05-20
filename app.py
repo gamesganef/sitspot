@@ -56,6 +56,10 @@ def index():
     db.commit()
 
     search = request.args.get("search")
+    radius = request.args.get("radius", type=float)
+
+    limit = int(request.args.get("limit", 10))
+    offset = int(request.args.get("offset", 0))
 
     if search:
         spots = c.execute("""
@@ -74,7 +78,7 @@ def index():
         s_list = list(s)
 
         dist = None
-        if user_lat and user_lng:
+        if user_lat is not None and user_lng is not None:
             try:
                 dist = calc_distance(user_lat, user_lng, float(s[4]), float(s[5]))
             except:
@@ -85,8 +89,20 @@ def index():
             "distance": dist
         })
 
-    if user_lat and user_lng:
-        spots_with_distance.sort(key=lambda x: x["distance"] if x["distance"] is not None else 999999)
+    if not search and user_lat is not None and user_lng is not None:
+        spots_with_distance.sort(
+            key=lambda x: x["distance"] if x["distance"] is not None else 999999
+        )
+
+    if not search:
+        if radius and user_lat is not None and user_lng is not None:
+            spots_with_distance = [
+                s for s in spots_with_distance
+                if s["distance"] is not None and s["distance"] <= radius
+            ]
+
+        if not radius:
+            spots_with_distance = spots_with_distance[offset:offset+limit]
 
     ratings_data = c.execute("""
         SELECT spot_id, AVG(rating), COUNT(*)
@@ -121,7 +137,9 @@ def index():
         favorites=favorites,
         user=session.get("user"),
         user_lat=user_lat,
-        user_lng=user_lng
+        user_lng=user_lng,
+        limit=limit,
+        offset=offset
     )
 
 
@@ -332,30 +350,18 @@ def delete(id):
         db.close()
         return "Niet toegestaan"
 
-    images = c.execute(
-        "SELECT filename FROM images WHERE spot_id=?",
-        (id,)
-    ).fetchall()
-
-    for img in images:
-        filepath = os.path.join(UPLOAD_FOLDER, img[0])
-        if os.path.exists(filepath):
-            try:
-                os.remove(filepath)
-            except:
-                pass
-
     c.execute("DELETE FROM ratings WHERE spot_id=?", (id,))
     c.execute("DELETE FROM images WHERE spot_id=?", (id,))
     c.execute("DELETE FROM favorites WHERE spot_id=?", (id,))
     c.execute("DELETE FROM spots WHERE id=?", (id,))
+
     db.commit()
     db.close()
 
     return redirect("/")
 
 
-# 🔥 ADD (FIXED stability)
+# 🔥 ADD
 @app.route("/add", methods=["GET", "POST"])
 def add():
     if "user" not in session:
@@ -378,31 +384,6 @@ def add():
             )
             VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
         """, (name, location, description, lat, lng, session["user"]))
-
-        spot_id = c.lastrowid
-
-        files = request.files.getlist("images")
-
-        for i, file in enumerate(files):
-            if file and file.filename != "":
-                try:
-                    filename = f"{spot_id}_{i}.jpg"
-                    filepath = os.path.join(UPLOAD_FOLDER, filename)
-
-                    img = Image.open(file)
-
-                    if img.mode in ("RGBA", "P"):
-                        img = img.convert("RGB")
-
-                    img.thumbnail((1280, 1280))
-                    img.save(filepath, "JPEG", quality=40, optimize=True)
-
-                    c.execute(
-                        "INSERT INTO images (spot_id, filename) VALUES (?, ?)",
-                        (spot_id, filename)
-                    )
-                except Exception as e:
-                    print("IMAGE ERROR:", e)
 
         db.commit()
         db.close()
@@ -436,22 +417,28 @@ def spot(id):
     ratings = [r[1] for r in reviews]
     avg = sum(ratings) / len(ratings) if ratings else None
 
-    remaining = None
-    if s[8]:
-        try:
-            remaining = int((datetime.fromisoformat(s[8]) - datetime.now()).total_seconds())
-        except:
-            remaining = None
-
     return render_template(
         "spot.html",
         s=s,
         reviews=reviews,
         imgs=imgs,
         avg=avg,
-        user=session.get("user"),
-        remaining=remaining
+        user=session.get("user")
     )
+
+
+# 🔥 EXTRA PAGINA'S
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
 
 
 if __name__ == "__main__":
