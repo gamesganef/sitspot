@@ -3,6 +3,7 @@
 <head>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5850476951105682"
      crossorigin="anonymous"></script>
+
     <title>SitSpot</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -11,6 +12,11 @@
     <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- 🔥 MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 </head>
 <body>
 
@@ -141,11 +147,23 @@
     </span>
 
     <div style="display:flex; gap:10px;">
-        <button onclick="acceptCookies()" style="background:#4CAF50;border:none;padding:10px 15px;color:white;cursor:pointer;">
+        <button onclick="acceptCookies()" style="
+            background:#4CAF50;
+            border:none;
+            padding:10px 15px;
+            color:white;
+            cursor:pointer;
+        ">
             Accepteren
         </button>
 
-        <button onclick="declineCookies()" style="background:#999;border:none;padding:10px 15px;color:white;cursor:pointer;">
+        <button onclick="declineCookies()" style="
+            background:#999;
+            border:none;
+            padding:10px 15px;
+            color:white;
+            cursor:pointer;
+        ">
             Weigeren
         </button>
     </div>
@@ -160,6 +178,17 @@ var map = L.map('map').setView([lat, lng], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
 }).addTo(map);
+
+
+// 🔥 CLUSTER GROUP
+var markers = L.markerClusterGroup({
+    chunkedLoading: true,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    maxClusterRadius: 60
+});
+
 
 function getLocationAndReload(){
     if(navigator.geolocation){
@@ -181,6 +210,7 @@ function getLocationAndReload(){
     }
 }
 
+
 function loadMore() {
     let url = new URL(window.location.href);
 
@@ -195,6 +225,7 @@ function loadMore() {
     window.location.href = url.toString();
 }
 
+
 function setRadius(r) {
     let url = new URL(window.location.href);
     url.searchParams.set("radius", r);
@@ -202,12 +233,14 @@ function setRadius(r) {
     window.location.href = url.toString();
 }
 
+
 function clearRadius() {
     let url = new URL(window.location.href);
     url.searchParams.delete("radius");
     url.searchParams.set("offset", 0);
     window.location.href = url.toString();
 }
+
 
 function loadAds() {
     let script = document.createElement("script");
@@ -217,16 +250,19 @@ function loadAds() {
     document.head.appendChild(script);
 }
 
+
 function acceptCookies() {
     localStorage.setItem("cookiesAccepted", "true");
     document.getElementById("cookie-banner").style.display = "none";
     loadAds();
 }
 
+
 function declineCookies() {
     localStorage.setItem("cookiesAccepted", "false");
     document.getElementById("cookie-banner").style.display = "none";
 }
+
 
 window.onload = function() {
     let consent = localStorage.getItem("cookiesAccepted");
@@ -238,17 +274,38 @@ window.onload = function() {
     if (consent === "true") {
         loadAds();
     }
-}
+};
 
+
+// 🔥 MARKERS → CLUSTER GROUP
 {% for item in spots %}
 {% set s = item.data %}
+
+(function(){
+
     var color = "{{ 'red' if s[7] else 'green' }}";
 
-    L.circleMarker([{{s[4]}}, {{s[5]}}], {
+    var marker = L.circleMarker([{{s[4]}}, {{s[5]}}], {
         color: color,
         radius: 8
-    }).addTo(map);
+    });
+
+    marker.bindPopup(
+        "<b>{{ s[1]|e }}</b><br>" +
+        "{{ s[2]|e }}<br>" +
+        "<a href='/spot/{{s[0]}}'>Bekijk spot →</a>"
+    );
+
+    markers.addLayer(marker);
+
+})();
+
 {% endfor %}
+
+
+// 🔥 ADD CLUSTERS TO MAP
+map.addLayer(markers);
+
 </script>
 
 </body>
